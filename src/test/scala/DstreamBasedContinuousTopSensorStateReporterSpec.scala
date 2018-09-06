@@ -1,9 +1,7 @@
-import com.holdenkarau.spark.testing.StreamingSuiteBase
 import org.scalatest.{Matchers, WordSpec}
 import java.io.{File, PrintWriter}
 import java.util
 
-import org.apache.commons.io.FileUtils
 import org.apache.commons.io.FileUtils
 import org.apache.spark.streaming.StreamingContext
 

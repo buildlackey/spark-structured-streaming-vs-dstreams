@@ -53,35 +53,35 @@ class DstreamBasedContinuousTopSensorStateReporter extends Serializable  {
   def processStream(stringContentStream: DStream[String], outputFile: String): Unit = {
     val lines: DStream[Array[String]] = stringContentStream.map(_.split(","))
 
-    // Find all of probe's states (order by most frequently occuring to least)
-    val probeHeroOccurrences: DStream[(String, Int)] =
+    // Filter for 'probe' type of sensor, then find all of probe's states (order by most frequently occurring to least)
+    val sensorStateOccurrences: DStream[(String, Int)] =
       lines.flatMap {
         wordsInLine: Array[String] =>
-          val fan = wordsInLine(0)
+          val sensorType = wordsInLine(0)
           var retval = Array[(String,Int)]()
-          if (fan == "probe") {
-            retval = wordsInLine.drop(2).map((hero: String) => (hero,1))
+          if (sensorType == "probe") {
+            retval = wordsInLine.drop(2).map((state: String) => (state,1))
           } else {
             retval = Array[(String,Int)]()     // skip non-probe records
           }
           retval
       }
 
-    val heroToCount: DStream[(String, Int)] =
-      probeHeroOccurrences.
+    val stateToCount: DStream[(String, Int)] =
+      sensorStateOccurrences.
         reduceByKeyAndWindow((count1:Int, count2:Int)=> count1 + count2, WINDOW_DURATION, SLIDE_DURATION)
-    val countToHero: DStream[(Int, String)] = heroToCount.map{ case(hero,count) => (count,hero) }
+    val countToState: DStream[(Int, String)] = stateToCount.map{ case(state,count) => (count,state) }
 
-    case class TopCandidatesResult(hero: String,
+    case class TopCandidatesResult(state: String,
                                    count: Int,
                                    candidates: Set[String] /* all candidates seen 'count' times*/)
     val topCandidates: DStream[TopCandidatesResult] =
-      countToHero.map{ case (count, hero) => TopCandidatesResult(hero, count, Set(hero)) }
+      countToState.map{ case (count, state) => TopCandidatesResult(state, count, Set(state)) }
 
     val topCandidatesFinalist: DStream[TopCandidatesResult] =  topCandidates.reduce {
       (top1:TopCandidatesResult, top2:TopCandidatesResult) =>
         if (top1.count == top2.count)
-          TopCandidatesResult(top1.hero, top1.count, top1.candidates ++ top2.candidates)
+          TopCandidatesResult(top1.state, top1.count, top1.candidates ++ top2.candidates)
         else if (top1.count > top2.count)
           top1
         else
