@@ -1,9 +1,10 @@
-import org.scalatest.{Matchers, WordSpec}
+package com.lackey.stream.examples.dstream
+
 import java.io.{File, PrintWriter}
-import java.util
 
 import org.apache.commons.io.FileUtils
 import org.apache.spark.streaming.StreamingContext
+import org.scalatest.{Matchers, WordSpec}
 
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable
