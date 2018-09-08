@@ -8,54 +8,36 @@ import scala.collection.{GenTraversableOnce, immutable}
 import java.sql.Timestamp
 
 
-object Temp extends App {
+object MostPopularStateForGroupFinder extends App {
 
-
-  def mapper(timestamp: Timestamp, rows: Iterator[Row]) : immutable.Seq[String] = {
+  /**
+    * Given a sequence of rows associated with the start time of a time window, this method
+    * finds the most popular states reported for probe sensors in that time window.
+    *
+    * Each Row is interpreted as Row( timestamp, stateName, countForStateInThisWindow, startTimeOfWindow.)
+    * Only the middle 2 values are used by this method.
+    */
+  def findMostPopularState(timestamp: Timestamp, rows: Iterator[Row]) : immutable.Seq[String] = {
     val rowList = rows.toList
     if (rowList.isEmpty) {
-      val x: immutable.Seq[String] = immutable.Seq[String]()
-      x
+      immutable.Seq[String]()
     }
     else {
-      val sortedRowList = rowList.sortBy( - _.getLong(2) /* count */)
+      val sortedRowList = rowList.sortBy( - _.getLong(2) )
       val maxCountForGroup = sortedRowList.head.getLong(2)
-
-
-      val filtered = sortedRowList.takeWhile{
-        row =>
-          val i = row.getLong(2)
-          val result = i == maxCountForGroup
-          println(s"for maxCountForGroup = ${maxCountForGroup} and row = $row - result is $result")
-          result
-      }
-      println(s"for timestamp $timestamp list is ${sortedRowList}")
-      val result: immutable.Seq[String] = filtered.map(_.getString(1))
-      result
+      val filtered = sortedRowList.takeWhile{ row => row.getLong(2) == maxCountForGroup }
+      filtered.map(_.getString(1))
     }
   }
 
-  
-  def mapper2(tuple: Tuple2[Timestamp, Iterator[Row]]) = {
+
+  /**
+    * This method exists to support unit testing
+    */
+  def findMostPopularState(tuple: Tuple2[Timestamp, Iterator[Row]]): immutable.Seq[String] = {
     val (timestamp: Timestamp, rows: Iterator[Row]) = tuple
-    mapper(timestamp, rows)
+    findMostPopularState(timestamp, rows)
   }
-
-  val row: Row = Row(1, true, "a string", null)
-
-  private val t1 = new Timestamp(0, 0, 0, 0, 0, 0, 1)
-  private val t2 = new Timestamp(0, 0, 0, 0, 0, 0, 2)
-  private val t3 = new Timestamp(0, 0, 0, 0, 0, 0, 3)
-  
-  val data: immutable.Seq[(Timestamp, Iterator[Row])] = List(
-    (t1, List[Row]().iterator),
-    (t2, List(Row(0, "8", 2L), Row(0, "junk", 2L), Row(0, "fred", 1L)).iterator),
-    (t3, List(Row(0, "8", 2L), Row(0, "junk", 2L), Row(0, "fred", 10L)).iterator)
-  )
-  
-  val result: Seq[String] = data.flatMap(mapper2 _)
-  
-  result.foreach(println _)
 }
 
 
@@ -120,23 +102,9 @@ object StructuredStreamingBasedContinuousTopSensorStateReporter {
 
     val groupedByWindowStart: KeyValueGroupedDataset[Timestamp, Row] = counted.groupByKey((row: Row) => row.getTimestamp(row.length - 1))
 
-    val function: (Timestamp, Iterator[Row]) => String = (timestamp: Timestamp, rows: Iterator[Row]) => "foo"
 
-
-    import Temp._
-    val mostPopularStatesForEachTimeWindow: Dataset[Seq[String]] = groupedByWindowStart.mapGroups(mapper)
-
-    //counted.show(100, false)
-    //println("END show")
-
-    /*
-
-    val windowsWithRanks: Dataset[Row] = counted.
-      withColumn("rank", rank().over(Window.partitionBy($"time_window").orderBy($"count".desc))).
-      orderBy($"time_window", $"rank").select($"state" === "fred")
-     */
-
-    //windowsWithRanks.show(100, false)
+    import MostPopularStateForGroupFinder._
+    val mostPopularStatesForEachTimeWindow: Dataset[Seq[String]] = groupedByWindowStart.mapGroups(findMostPopularState)
 
 
     val query =
