@@ -1,14 +1,66 @@
 package com.lackey.stream.examples.dataset
 
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{Column, Dataset, Row, SparkSession}
+import java.sql.Timestamp
 
-import scala.tools.nsc.interpreter.Completion.Candidates
+import org.apache.spark.sql.{Dataset, KeyValueGroupedDataset, Row, SparkSession}
+
+import scala.collection.{GenTraversableOnce, immutable}
+import java.sql.Timestamp
 
 
-case class Candidate(timeStamp: String, state: String, count: Long)
+object Temp extends App {
+
+
+  def mapper(timestamp: Timestamp, rows: Iterator[Row]) : immutable.Seq[String] = {
+    val rowList = rows.toList
+    if (rowList.isEmpty) {
+      val x: immutable.Seq[String] = immutable.Seq[String]()
+      x
+    }
+    else {
+      val sortedRowList = rowList.sortBy( - _.getLong(2) /* count */)
+      val maxCountForGroup = sortedRowList.head.getLong(2)
+
+
+      val filtered = sortedRowList.takeWhile{
+        row =>
+          val i = row.getLong(2)
+          val result = i == maxCountForGroup
+          println(s"for maxCountForGroup = ${maxCountForGroup} and row = $row - result is $result")
+          result
+      }
+      println(s"for timestamp $timestamp list is ${sortedRowList}")
+      val result: immutable.Seq[String] = filtered.map(_.getString(1))
+      result
+    }
+  }
+
+  
+  def mapper2(tuple: Tuple2[Timestamp, Iterator[Row]]) = {
+    val (timestamp: Timestamp, rows: Iterator[Row]) = tuple
+    mapper(timestamp, rows)
+  }
+
+  val row: Row = Row(1, true, "a string", null)
+
+  private val t1 = new Timestamp(0, 0, 0, 0, 0, 0, 1)
+  private val t2 = new Timestamp(0, 0, 0, 0, 0, 0, 2)
+  private val t3 = new Timestamp(0, 0, 0, 0, 0, 0, 3)
+  
+  val data: immutable.Seq[(Timestamp, Iterator[Row])] = List(
+    (t1, List[Row]().iterator),
+    (t2, List(Row(0, "8", 2L), Row(0, "junk", 2L), Row(0, "fred", 1L)).iterator),
+    (t3, List(Row(0, "8", 2L), Row(0, "junk", 2L), Row(0, "fred", 10L)).iterator)
+  )
+  
+  val result: Seq[String] = data.flatMap(mapper2 _)
+  
+  result.foreach(println _)
+}
+
 
 object StructuredStreamingBasedContinuousTopSensorStateReporter {
+
 
   val WINDOW_DURATION = "15 minutes"
   val SLIDE_DURATION = "15 minutes"
@@ -27,22 +79,21 @@ object StructuredStreamingBasedContinuousTopSensorStateReporter {
     import sparkSession.implicits._
 
 
-
-    var counter = 0
+    var count = 0
 
     def getTimestampColumn = {
-      counter = (counter + 2) % 60
-      f"2017-01-01 00:$counter%02d:00"
+      count = (count + 2) % 60
+      f"2017-01-01 00:$count%02d:00"
     }
 
     //create stream from folder
     val fileStreamDf: Dataset[String] = sparkSession.readStream.textFile("/tmp/input.dir").as[String]
 
     val result: Dataset[(String, String)] = fileStreamDf.flatMap {
-      line: String =>
+      line: String =>6218
         val parts: Array[String] = line.split(",")
         if (parts.length >= 3 && parts(0).equals("probe")) {
-          (2 until parts.length).map ( colIndex => (parts(colIndex), getTimestampColumn) )
+          (2 until parts.length).map(colIndex => (parts(colIndex), getTimestampColumn))
         } else {
           Nil
         }
@@ -57,60 +108,43 @@ object StructuredStreamingBasedContinuousTopSensorStateReporter {
     //timeStamped.cache()
     //timeStamped.show()
 
-    val windowsWithRanks: Dataset[Row] =
-      timeStamped.
-        groupBy(window($"timestamp", WINDOW_DURATION) as "group", $"state").
-        agg(count("state") as "count").
-        orderBy($"group", $"count".desc)
-
-        //withColumn("rank", rank().over(Window.partitionBy($"start").orderBy($"count".desc)))
-
+    val timeWindow = window($"timestamp", WINDOW_DURATION, SLIDE_DURATION).as("time_window")
+    val counted = timeStamped
+      .groupBy(timeWindow, $"state")
+      .count()
+      .orderBy($"time_window", $"count".desc) // do we need this order by ?
+      .withColumn("window_start", $"time_window.start")
 
 
-    val windowsWithRanks: Dataset[Row] =
-      timeStamped.
-        groupBy(window($"timestamp", WINDOW_DURATION) as "group", $"state").
-        agg(count("state") as "count").
-        orderBy($"group", $"count".desc)
+    counted.printSchema()
+
+    val groupedByWindowStart: KeyValueGroupedDataset[Timestamp, Row] = counted.groupByKey((row: Row) => row.getTimestamp(row.length - 1))
+
+    val function: (Timestamp, Iterator[Row]) => String = (timestamp: Timestamp, rows: Iterator[Row]) => "foo"
 
 
+    import Temp._
+    val mostPopularStatesForEachTimeWindow: Dataset[Seq[String]] = groupedByWindowStart.mapGroups(mapper)
 
-    windowsWithRanks.printSchema()
+    //counted.show(100, false)
+    //println("END show")
+
+    /*
+
+    val windowsWithRanks: Dataset[Row] = counted.
+      withColumn("rank", rank().over(Window.partitionBy($"time_window").orderBy($"count".desc))).
+      orderBy($"time_window", $"rank").select($"state" === "fred")
+     */
+
+    //windowsWithRanks.show(100, false)
 
 
-    val mapped: Dataset[Candidate] = windowsWithRanks.map(row => Candidate(row.get(0).toString, row.getString(1), row.getLong(2)))
-
-    val mapped2: RDD[Candidate] = mapped.rdd.map(c => Candidate(c.timeStamp, c.state, c.count +100))
-
-    val mapped3 = sparkSession.createDataFrame(mapped2)
-
-
-    val writer = new RowWriter()
     val query =
-      mapped3.writeStream. outputMode("complete") .
-        format("console").option("truncate", false).start()
-
+      mostPopularStatesForEachTimeWindow.writeStream.
+        outputMode("complete").format("console").option("truncate", false).start()
     query.awaitTermination()
-
-
-      //foreach(writer).start()
-
   }
 
+
+
 }
-/*
-
-
-  count(). orderBy($"timewindow", $"count".desc)   // do we need this order by
-
-
-//counted.show(100, false)
-//println("END show")
-
-val windowsWithRanks: Dataset[Row] = counted.
-withColumn("rank", rank().over(Window.partitionBy($"timewindow").orderBy($"count".desc))).
-orderBy($"timewindow", $"rank")
-
-//windowsWithRanks.show(100, false)
-
- */
