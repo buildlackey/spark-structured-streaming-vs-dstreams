@@ -42,9 +42,10 @@ object MostPopularStateForGroupFinder extends App {
 
 object StructuredStreamingBasedContinuousTopSensorStateReporter {
 
+  import com.lackey.stream.examples.Constants._
 
-  val WINDOW_DURATION = "15 minutes"
-  val SLIDE_DURATION = "15 minutes"
+  val WINDOW_DURATION: String = "15 minutes"
+  val SLIDE_DURATION: String = "15 minutes"
 
   def main(args: Array[String]): Unit = {
 

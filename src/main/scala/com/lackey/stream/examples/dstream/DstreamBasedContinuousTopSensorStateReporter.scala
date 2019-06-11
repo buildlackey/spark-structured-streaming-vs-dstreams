@@ -9,11 +9,7 @@ import org.apache.spark.streaming.{Duration, Seconds, StreamingContext}
 
 
 class DstreamBasedContinuousTopSensorStateReporter extends Serializable {
-  val BATCH_SECONDS = 1
-  val BATCH_DURATION: Duration = Seconds(BATCH_SECONDS * 1)
-  val WINDOW_DURATION: Duration = Seconds(BATCH_SECONDS * 30)
-  val SLIDE_DURATION: Duration = Seconds(BATCH_SECONDS * 10)
-
+  import com.lackey.stream.examples.Constants._
 
   def writeStringToFile(outputPath: String,
                         content: String): Unit = {
