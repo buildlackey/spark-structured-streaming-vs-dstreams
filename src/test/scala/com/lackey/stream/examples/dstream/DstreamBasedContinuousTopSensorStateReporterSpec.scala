@@ -19,26 +19,24 @@ class DstreamBasedContinuousTopSensorStateReporterSpec extends WordSpec with Mat
   val t7_input_path = s"$incomingFilesDirPath/t7_probe_x2_1"
   val t12_input_path = s"$incomingFilesDirPath/t12_probe_x1_2"
 
+  def now = java.time.LocalDateTime.now().toString()
 
   val t2_probe_x2_2 =
-    """
-      |probe,oakland,x1,x2
-      |f,freemont,x3,x4
-      |probe,freemont,x2,x4
+    s"""$now,probe,oakland,x1,x2
+      |$now,f,freemont,x3,x4
+      |$now,probe,freemont,x2,x4
     """.stripMargin
 
   val t7_probe_x2_1 =
-    """
-      |probe,oakland,x2
-      |m,freemont,x2,x3
+    s"""$now,probe,oakland,x2
+      |$now,m,freemont,x2,x3
     """.stripMargin
 
 
   val t12_probe_x1_2 =
-    """
-      |probe,oakland,x1
-      |m,freemont,x9
-      |probe,oakland,x1
+    s"""$now,probe,oakland,x1
+      |$now,m,freemont,x9
+      |$now,probe,oakland,x1
     """.stripMargin
 
   def writeStringToFile(filePath: String, content: String): Unit = {
@@ -47,22 +45,15 @@ class DstreamBasedContinuousTopSensorStateReporterSpec extends WordSpec with Mat
 
 
   "ContinuousTopSensorStateReporter" should {
-    "correctly output top states for target sensor" in {
 
-      // TODO - factor out all the File creates to top of function
+    def verifyResult = {
+      val output: mutable.Seq[String] = FileUtils.readLines(new File(outputFile)).asScala
+      val strings: mutable.Seq[String] = output.map(_.replaceAll(".*sensor states: ", ""))
+      val expected = "Set(x2)|Set(x1, x2)|Set(x1, x2)|Set(x1)"
+      strings.mkString("|") shouldBe expected
+    }
 
-      // Delete and recreate checkpoint and input directories and any old version of output file
-      //
-      new File(outputFile).delete()
-      FileUtils.deleteDirectory(new File(checkpointDirPath))
-      FileUtils.deleteDirectory(new File(incomingFilesDirPath))
-      new File(checkpointDirPath).mkdirs()
-      new File(incomingFilesDirPath).mkdirs()
-
-      val ctx: StreamingContext  =
-        new DstreamBasedContinuousTopSensorStateReporter().
-          beginProcessingInputStream(checkpointDirPath, incomingFilesDirPath, outputFile)
-
+    def writeRecords(): Unit = {
       Thread.sleep(2 * 1000) //
       writeStringToFile(t2_input_path, t2_probe_x2_2)
 
@@ -73,13 +64,27 @@ class DstreamBasedContinuousTopSensorStateReporterSpec extends WordSpec with Mat
       writeStringToFile(t12_input_path, t12_probe_x1_2)
 
       Thread.sleep(40 * 1000) //
-      ctx.stop()
-
-      val output: mutable.Seq[String] = FileUtils.readLines(new File(outputFile)).asScala
-      val strings: mutable.Seq[String] = output.map(_.replaceAll(".*sensor states: ", ""))
-      val expectedResult = "Set(x2)|Set(x1, x2)|Set(x1, x2)|Set(x1)"
-
-      strings.mkString("|") shouldBe "Set(x2)|Set(x1, x2)|Set(x1, x2)|Set(x1)"
     }
+
+    "correctly output top states for target sensor" in {
+      setup()
+
+      val ctx: StreamingContext  =
+        new DstreamBasedContinuousTopSensorStateReporter().
+          beginProcessingInputStream(checkpointDirPath, incomingFilesDirPath, outputFile)
+
+      writeRecords()
+      verifyResult
+      ctx.stop()
+    }
+  }
+
+  // Delete and recreate checkpoint and input directories and any old version of output file
+  def setup(): Boolean = {
+    new File(outputFile).delete()
+    FileUtils.deleteDirectory(new File(checkpointDirPath))
+    FileUtils.deleteDirectory(new File(incomingFilesDirPath))
+    new File(checkpointDirPath).mkdirs()
+    new File(incomingFilesDirPath).mkdirs()
   }
 }
