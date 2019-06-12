@@ -9,11 +9,11 @@ libraryDependencies += "org.apache.spark" %% "spark-streaming" % "2.3.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 
-libraryDependencies += "org.apache.spark"  %%  "spark-sql"     % "2.3.1"
+libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.3.1"
 
-libraryDependencies += "org.apache.spark"  %%  "spark-sql"     % "2.3.1"
+libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.3.1"
 
-libraryDependencies += "commons-io"  % "commons-io" % "2.4"
+libraryDependencies += "commons-io" % "commons-io" % "2.4"
 
 
 

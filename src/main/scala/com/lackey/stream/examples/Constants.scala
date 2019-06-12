@@ -1,12 +1,7 @@
 package com.lackey.stream.examples
 
 
-import java.io.{FileWriter, PrintWriter}
-import java.util.Calendar
-
-import org.apache.spark.SparkConf
-import org.apache.spark.streaming.dstream.DStream
-import org.apache.spark.streaming.{Duration, Seconds, StreamingContext}
+import org.apache.spark.streaming.{Duration, Seconds}
 
 
 object Constants {

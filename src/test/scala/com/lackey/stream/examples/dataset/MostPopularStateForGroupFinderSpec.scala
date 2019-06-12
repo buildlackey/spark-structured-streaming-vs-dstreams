@@ -1,8 +1,10 @@
 package com.lackey.stream.examples.dataset
 
 import java.sql.Timestamp
+
 import org.apache.spark.sql.Row
 import org.scalatest.{Matchers, WordSpec}
+
 import scala.collection.immutable
 
 class MostPopularStateForGroupFinderSpec extends WordSpec with Matchers {

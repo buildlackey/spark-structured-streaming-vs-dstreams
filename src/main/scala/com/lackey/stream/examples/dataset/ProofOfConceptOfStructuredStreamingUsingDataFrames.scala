@@ -1,8 +1,8 @@
 package com.lackey.stream.examples.dataset
 
-import org.apache.spark.sql.{Dataset, SparkSession}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 object ProofOfConceptOfStructuredStreamingUsingDataFrames {
 
@@ -12,6 +12,7 @@ object ProofOfConceptOfStructuredStreamingUsingDataFrames {
     import sparkSession.implicits._
 
     var count = 0
+
     def getTimestampColumn = {
       count = (count + 2) % 60
       f"2017-01-01 00:$count%02d:00"
@@ -23,7 +24,7 @@ object ProofOfConceptOfStructuredStreamingUsingDataFrames {
       line: String =>
         val parts: Array[String] = line.split(",")
         if (parts.length >= 3 && parts(0).equals("probe")) {
-          (2 until parts.length).map ( colIndex => (parts(colIndex), getTimestampColumn) )
+          (2 until parts.length).map(colIndex => (parts(colIndex), getTimestampColumn))
         } else {
           Nil
         }
@@ -39,7 +40,7 @@ object ProofOfConceptOfStructuredStreamingUsingDataFrames {
       groupBy(
         window($"timestamp", "15 minutes").as("timewindow"), $"state").
       count().
-      orderBy($"timewindow", $"count".desc)   // do we need this order by
+      orderBy($"timewindow", $"count".desc) // do we need this order by
 
     counted.
       withColumn("rank", rank().

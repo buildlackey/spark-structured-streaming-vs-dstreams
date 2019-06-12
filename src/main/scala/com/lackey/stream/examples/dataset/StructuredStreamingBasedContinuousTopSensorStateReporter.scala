@@ -4,8 +4,7 @@ import java.sql.Timestamp
 
 import org.apache.spark.sql._
 
-import scala.collection.{GenTraversableOnce, immutable}
-import java.sql.Timestamp
+import scala.collection.immutable
 
 
 object MostPopularStateForGroupFinder extends App {
@@ -16,15 +15,15 @@ object MostPopularStateForGroupFinder extends App {
     *
     * Each Row is interpreted as Row( timestamp, stateName, countForStateInThisWindow.)
     */
-  def findMostPopularState(timestamp: Timestamp, rows: Iterator[Row]) : immutable.Seq[String] = {
+  def findMostPopularState(timestamp: Timestamp, rows: Iterator[Row]): immutable.Seq[String] = {
     val rowList = rows.toList
     if (rowList.isEmpty) {
       immutable.Seq[String]()
     }
     else {
-      val sortedRowList = rowList.sortBy( - _.getLong(2) /* order by countForStateInThisWindow */)
+      val sortedRowList = rowList.sortBy(-_.getLong(2) /* order by countForStateInThisWindow */)
       val maxCountForGroup = sortedRowList.head.getLong(2)
-      val filtered = sortedRowList.takeWhile{ row => row.getLong(2) == maxCountForGroup }
+      val filtered = sortedRowList.takeWhile { row => row.getLong(2) == maxCountForGroup }
       filtered.map(_.getString(1))
     }
   }
@@ -44,8 +43,8 @@ object StructuredStreamingBasedContinuousTopSensorStateReporter {
 
   import com.lackey.stream.examples.Constants._
 
-  val WINDOW_DURATION: String = "15 minutes"
-  val SLIDE_DURATION: String = "15 minutes"
+  val WINDOW: String = s"$WINDOW_SECS minutes"
+  val SLIDE: String = s"$SLIDE_SECS minutes"
 
   def main(args: Array[String]): Unit = {
 
@@ -86,7 +85,7 @@ object StructuredStreamingBasedContinuousTopSensorStateReporter {
         withColumn("timestamp", unix_timestamp($"_2").cast("timestamp")).
         drop($"_2")
 
-    val timeWindow = window($"timestamp", WINDOW_DURATION, SLIDE_DURATION).as("time_window")
+    val timeWindow = window($"timestamp", WINDOW, SLIDE).as("time_window")
     val counted: DataFrame = timeStamped
       .groupBy(timeWindow, $"state")
       .count()
@@ -108,7 +107,6 @@ object StructuredStreamingBasedContinuousTopSensorStateReporter {
         outputMode("complete").format("console").option("truncate", false).start()
     query.awaitTermination()
   }
-
 
 
 }
