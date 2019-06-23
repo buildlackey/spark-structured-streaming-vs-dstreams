@@ -12,4 +12,6 @@ object Constants {
   val BATCH_DURATION: Duration = Seconds(BATCH_SECONDS * 1)
   val WINDOW_DURATION: Duration = Seconds(BATCH_SECONDS * WINDOW_SECS)
   val SLIDE_DURATION: Duration = Seconds(BATCH_SECONDS * SLIDE_SECS)
+
+  val incomingFilesDirPath = "/tmp/spark.in"
 }
