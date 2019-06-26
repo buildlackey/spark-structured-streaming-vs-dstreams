@@ -9,17 +9,8 @@ import org.apache.spark.streaming.dstream.DStream
 
 
 class DstreamBasedContinuousTopSensorStateReporter extends Serializable {
-
   import com.lackey.stream.examples.Constants._
-
-  def writeStringToFile(outputPath: String,
-                        content: String): Unit = {
-    val fileWriter = new FileWriter(outputPath, true)
-    val printWriter = new PrintWriter(fileWriter)
-    val timestampedOutput = s"${Calendar.getInstance.getTime}: $content"
-    printWriter.println(timestampedOutput);
-    fileWriter.close()
-  }
+  import com.lackey.stream.examples.FileUtils._
 
 
   def processStream(stringContentStream: DStream[String], outputFile: String): Unit = {

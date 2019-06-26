@@ -1,13 +1,19 @@
 package com.lackey.stream.examples.dstream
 
 import java.io.{File, PrintWriter}
+import java.time.Instant
+import java.util.Date
 
+import com.lackey.stream.examples.dataset.StructuredStreamingTopSensorStateReporter
 import org.apache.commons.io.FileUtils
 import org.apache.spark.streaming.StreamingContext
 import org.scalatest.{Assertion, Matchers, WordSpec}
 
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class TopSensorStateReporterSpec extends WordSpec with Matchers {
   import com.lackey.stream.examples.Constants._
@@ -21,29 +27,32 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
 
   def now = java.time.LocalDateTime.now().toString()
 
-  val t2_probe_x2_2 =
+  def t2_probe_x2_2 =
     s"""$now,probe,oakland,x1,x2
        |$now,f,freemont,x3,x4
-       |$now,probe,freemont,x2,x4
+       |$now,probe,cupertino,x2,x4
     """.stripMargin
 
-  val t7_probe_x2_1 =
-    s"""$now,probe,oakland,x2
-       |$now,m,freemont,x2,x3
-    """.stripMargin
-
-
-  val t12_probe_x1_2 =
-    s"""$now,probe,oakland,x1
-       |$now,m,freemont,x9
-       |$now,probe,oakland,x1
+  def t7_probe_x2_1 =
+    s"""$now,probe,hayward,x2
+       |$now,m,vallejo,x2,x3
     """.stripMargin
 
 
-  "ContinuousTopSensorStateReporter" should {
+  def t12_probe_x1_2 =
+    s"""$now,probe,milpitas,x1
+       |$now,m,berkeley,x9
+       |$now,probe,burlingame,x1
+    """.stripMargin
 
 
-    "correctly output top states for target sensor" in {
+  def dummy =
+    s"""$now,zoop,oakland,x1
+       |$now,rockbox,oakland,x1
+    """.stripMargin
+
+  "Top Sensor State Reporter" should {
+    "correctly output top states for target sensor using DStreams" in {
       setup()
 
       val ctx: StreamingContext =
@@ -54,7 +63,46 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
       verifyResult
       ctx.stop()
     }
+
+    "correctly output top states for target sensor using structured streaming" in {
+      setup()
+
+      var timeStampSeconds = Instant.now.getEpochSecond
+      while (timeStampSeconds % 30 != 0) {  timeStampSeconds = Instant.now.getEpochSecond }
+      println(s"start processing on 0 or 30 second boundary  ${new Date().toString}")
+
+      val queryFuture =
+        Future {
+          Thread.sleep(10 * 1000)
+          StructuredStreamingTopSensorStateReporter. processInputStream()
+        }
+
+
+      writeRecords()
+      val query = Await.result(queryFuture , 6 seconds)
+      verifyResult
+      query.stop()
+    }
   }
+
+
+  /*
+    "ContinuousTopSensorStateReporter" should {
+
+
+    "correctly output top states for target sensor using structured streaming" in {
+      setup()
+
+      val query =
+        StructuredStreamingTopSensorStateReporter.
+          processInputStream()
+
+      writeRecords()
+      query.awaitTermination()
+      verifyResult
+    }
+
+   */
 
   def writeStringToFile(filePath: String, content: String): Unit = {
     new PrintWriter(filePath) {
@@ -72,15 +120,38 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
 
   def writeRecords(): Unit = {
     Thread.sleep(2 * 1000) //
+    println(s"wrote to file at ${new Date().toString}")
     writeStringToFile(t2_input_path, t2_probe_x2_2)
 
     Thread.sleep(5 * 1000) //
+    println(s"wrote to file2 at ${new Date().toString}")
     writeStringToFile(t7_input_path, t7_probe_x2_1)
 
     Thread.sleep(5 * 1000) //
+    println(s"wrote to file3 at ${new Date().toString}")
     writeStringToFile(t12_input_path, t12_probe_x1_2)
 
-    Thread.sleep(40 * 1000) //
+
+    Thread.sleep(7 * 1000) //
+    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
+
+
+    Thread.sleep(7 * 1000) //
+    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
+
+    Thread.sleep(7 * 1000) //
+    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
+
+    Thread.sleep(7 * 1000) //
+    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
+
+    Thread.sleep(7 * 1000) //
+    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
+
+    Thread.sleep(7 * 1000) //
+    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
+
+    //Thread.sleep(40 * 1000) //
   }
 
   // Delete and recreate checkpoint and input directories and any old version of output file
