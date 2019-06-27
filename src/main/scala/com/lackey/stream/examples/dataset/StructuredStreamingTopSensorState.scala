@@ -24,8 +24,11 @@ import org.apache.spark.sql.streaming.{ProcessingTime, StreamingQuery, Trigger}
 import org.apache.spark.sql.types.{StructField, StructType}
 import org.apache.spark.sql.types.{StringType, StructType}
 import com.lackey.stream.examples.Constants._
+import com.lackey.stream.examples.FileHelpers
 
+import collection.immutable.SortedSet
 import scala.collection.{immutable, mutable}
+import mutable.WrappedArray
 
 
 object WriterStrategies {
@@ -58,29 +61,21 @@ object WriterStrategies {
               .drop("rank")
               .groupBy("window_start").agg(collect_list("state").as("states"))
 
-          topCountByWindowAndStateDf.printSchema()
-          topCountByWindowAndStateDf.show(truncate = false)
-
-
           val statesForEachWindow =
             topCountByWindowAndStateDf.
               collect().
               map {
                 row: Row =>
                   val windowStart = row.getAs[Any]("window_start").toString
-                  val xx = row.getAs[Any]("states")
-                  val states =  // we convert from TreeSet to Set to match dstream output
-                    (
-                    collection.immutable.SortedSet[String]() ++
-                      row.getAs[mutable.WrappedArray[String]]("states").toSet
-                      ).toSet
+                  val states = // we convert from TreeSet to Set to match dstream output
+                    SortedSet[String]() ++ row.getAs[WrappedArray[String]]("states").toSet
                   s"for window $windowStart got sensor states: $states"
 
               }.toList
 
-          writeStringToFile(
+          FileHelpers.writeStringToFile(
             outputFile,
-            statesForEachWindow.mkString("\n"), append=false)
+            statesForEachWindow.mkString("\n"), append = false)
       }
       .start()
   }
@@ -93,14 +88,6 @@ object WriterStrategies {
     }
 
     override def close(errorOrNull: Throwable): Unit = {}
-  }
-
-  def writeStringToFile(outputPath: String, content: String, append: Boolean = true): Unit = {
-    val fileWriter = new FileWriter(outputPath, append)
-    val printWriter = new PrintWriter(fileWriter)
-    val timestampedOutput = s"${Calendar.getInstance.getTime}: $content"
-    printWriter.println(timestampedOutput)
-    fileWriter.close()
   }
 }
 

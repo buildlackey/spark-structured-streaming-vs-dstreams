@@ -53,7 +53,7 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
       setup()
 
       val ctx: StreamingContext =
-        new DstreamBasedContinuousTopSensorStateReporter().
+        new DstreamTopSensorState().
           beginProcessingInputStream(checkpointDirPath, incomingFilesDirPath, outputFile)
 
       writeRecords()
@@ -93,7 +93,7 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
   def verifyResult: Assertion = {
     val output: mutable.Seq[String] = FileUtils.readLines(new File(outputFile)).asScala
     val strings: mutable.Seq[String] = output.map(_.replaceAll(".*sensor states: ", ""))
-    val expected = "Set(x2)|Set(x1, x2)|Set(x1, x2)|Set(x1)"
+    val expected = "TreeSet(x2)|TreeSet(x1, x2)|TreeSet(x1, x2)|TreeSet(x1)"
     strings.mkString("|") shouldBe expected
   }
 

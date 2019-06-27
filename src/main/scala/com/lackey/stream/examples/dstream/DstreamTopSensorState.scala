@@ -7,8 +7,12 @@ import org.apache.spark.SparkConf
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
+import scala.collection.immutable.TreeSet
+import scala.collection.mutable
 
-class DstreamBasedContinuousTopSensorStateReporter extends Serializable {
+
+class DstreamTopSensorState extends Serializable {
+
   import com.lackey.stream.examples.Constants._
   import com.lackey.stream.examples.FileHelpers._
 
@@ -29,24 +33,37 @@ class DstreamBasedContinuousTopSensorStateReporter extends Serializable {
 
     val stateToCount: DStream[(String, Int)] =
       sensorStateOccurrences.
-        reduceByKeyAndWindow((count1: Int, count2: Int) => count1 + count2, WINDOW_DURATION, SLIDE_DURATION)
-    val countToState: DStream[(Int, String)] = stateToCount.map { case (state, count) => (count, state) }
+        reduceByKeyAndWindow(
+          (count1: Int, count2: Int)
+          => count1 + count2, WINDOW_DURATION, SLIDE_DURATION
+        )
+    val countToState: DStream[(Int, String)] =
+      stateToCount.map {
+        case (state, count) => (count, state)
+      }
 
     case class TopCandidatesResult(state: String,
                                    count: Int,
-                                   candidates: Set[String] /* all candidates seen 'count' times*/)
+                                   candidates: TreeSet[String] /* all candidates seen 'count' times*/)
     val topCandidates: DStream[TopCandidatesResult] =
-      countToState.map { case (count, state) => TopCandidatesResult(state, count, Set(state)) }
+      countToState.map {
+        case (count, state) =>
+          TopCandidatesResult(state, count, TreeSet(state))
+      }
 
-    val topCandidatesFinalist: DStream[TopCandidatesResult] = topCandidates.reduce {
-      (top1: TopCandidatesResult, top2: TopCandidatesResult) =>
-        if (top1.count == top2.count)
-          TopCandidatesResult(top1.state, top1.count, top1.candidates ++ top2.candidates)
-        else if (top1.count > top2.count)
-          top1
-        else
-          top2
-    }
+    val topCandidatesFinalist: DStream[TopCandidatesResult] =
+      topCandidates.reduce {
+        (top1: TopCandidatesResult, top2: TopCandidatesResult) =>
+          if (top1.count == top2.count)
+            TopCandidatesResult(
+              top1.state,
+              top1.count,
+              top1.candidates ++ top2.candidates)
+          else if (top1.count > top2.count)
+            top1
+          else
+            top2
+      }
 
     topCandidatesFinalist.foreachRDD { rdd =>
       rdd.foreach {
@@ -60,9 +77,6 @@ class DstreamBasedContinuousTopSensorStateReporter extends Serializable {
   def createContext(incomingFilesDir: String,
                     checkpointDirectory: String,
                     outputFile: String): StreamingContext = {
-    // If you do not see this printed, that means the StreamingContext has been loaded from new checkpoint
-    println("Creating new context")
-
     val sparkConf = new SparkConf().setMaster("local[*]").setAppName("OldSchoolStreaming")
     val ssc = new StreamingContext(sparkConf, BATCH_DURATION)
     ssc.checkpoint(checkpointDirectory)
