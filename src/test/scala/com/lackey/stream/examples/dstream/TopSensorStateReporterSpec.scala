@@ -132,26 +132,7 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
     writeStringToFile(t12_input_path, t12_probe_x1_2)
 
 
-    Thread.sleep(7 * 1000) //
-    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
-
-
-    Thread.sleep(7 * 1000) //
-    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
-
-    Thread.sleep(7 * 1000) //
-    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
-
-    Thread.sleep(7 * 1000) //
-    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
-
-    Thread.sleep(7 * 1000) //
-    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
-
-    Thread.sleep(7 * 1000) //
-    writeStringToFile(s"$incomingFilesDirPath/dummy_${System.currentTimeMillis}", dummy)
-
-    //Thread.sleep(40 * 1000) //
+    Thread.sleep(30 * 1000) //
   }
 
   // Delete and recreate checkpoint and input directories and any old version of output file
