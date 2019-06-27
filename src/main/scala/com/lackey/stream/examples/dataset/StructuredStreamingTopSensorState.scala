@@ -67,7 +67,7 @@ object WriterStrategies {
               map {
                 row: Row =>
                   val windowStart = row.getAs[Any]("window_start").toString
-                  val states = // we convert from TreeSet to Set to match dstream output
+                  val states =
                     SortedSet[String]() ++ row.getAs[WrappedArray[String]]("states").toSet
                   s"for window $windowStart got sensor states: $states"
 
