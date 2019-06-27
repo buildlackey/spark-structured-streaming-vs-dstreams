@@ -51,9 +51,7 @@ class DstreamBasedContinuousTopSensorStateReporter extends Serializable {
     topCandidatesFinalist.foreachRDD { rdd =>
       rdd.foreach {
         item: TopCandidatesResult =>
-          writeStringToFile(
-            outputFile,
-            s"top sensor states: ${item.candidates}")
+          writeStringToFile(outputFile, s"top sensor states: ${item.candidates}", true)
       }
     }
   }

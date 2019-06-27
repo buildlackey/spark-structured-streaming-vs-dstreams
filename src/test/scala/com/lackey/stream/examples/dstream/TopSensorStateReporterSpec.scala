@@ -18,9 +18,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class TopSensorStateReporterSpec extends WordSpec with Matchers {
   import com.lackey.stream.examples.Constants._
 
-  val checkpointDirPath = "/tmp/spark"
-  val outputFile = "/tmp/sensor.state.report"
-
   val t2_input_path = s"$incomingFilesDirPath/t2_probe_x2_2"
   val t7_input_path = s"$incomingFilesDirPath/t7_probe_x2_1"
   val t12_input_path = s"$incomingFilesDirPath/t12_probe_x1_2"
@@ -104,6 +101,8 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
     }
 
    */
+
+  // TODO - replace wi/ FileUtils
 
   def writeStringToFile(filePath: String, content: String): Unit = {
     new PrintWriter(filePath) {

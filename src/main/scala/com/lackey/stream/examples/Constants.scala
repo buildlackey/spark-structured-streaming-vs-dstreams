@@ -14,4 +14,6 @@ object Constants {
   val SLIDE_DURATION: Duration = Seconds(BATCH_SECONDS * SLIDE_SECS)
 
   val incomingFilesDirPath = "/tmp/spark.in"
+  val checkpointDirPath = "/tmp/spark"
+  val outputFile = "/tmp/sensor.state.report"
 }
