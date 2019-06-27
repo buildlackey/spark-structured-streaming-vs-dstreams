@@ -10,7 +10,7 @@ import org.apache.spark.streaming.dstream.DStream
 
 class DstreamBasedContinuousTopSensorStateReporter extends Serializable {
   import com.lackey.stream.examples.Constants._
-  import com.lackey.stream.examples.FileUtils._
+  import com.lackey.stream.examples.FileHelpers._
 
 
   def processStream(stringContentStream: DStream[String], outputFile: String): Unit = {

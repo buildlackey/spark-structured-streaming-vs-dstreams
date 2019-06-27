@@ -1,10 +1,10 @@
 package com.lackey.stream.examples.dataset
 
+import java.io.{FileWriter, PrintWriter}
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
-import java.util.Date
+import java.util.{Calendar, Date}
 
-import com.lackey.stream.examples.FileUtils
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
@@ -67,13 +67,8 @@ object WriterStrategies {
               collect().
               map {
                 row: Row =>
-                  println("row:" + row);
-                  println("row.getAs[String](\"window_start\"):" + row.getAs[Any]("window_start"))
                   val windowStart = row.getAs[Any]("window_start").toString
-
                   val xx = row.getAs[Any]("states")
-                  System.out.println("xx:" + xx);
-
                   val states =  // we convert from TreeSet to Set to match dstream output
                     (
                     collection.immutable.SortedSet[String]() ++
@@ -83,7 +78,7 @@ object WriterStrategies {
 
               }.toList
 
-          FileUtils.writeStringToFile(
+          writeStringToFile(
             outputFile,
             statesForEachWindow.mkString("\n"), append=false)
       }
@@ -95,15 +90,21 @@ object WriterStrategies {
 
     override def process(value: Row): Unit = {
       value.schema.printTreeString()
-
     }
 
     override def close(errorOrNull: Throwable): Unit = {}
   }
 
+  def writeStringToFile(outputPath: String, content: String, append: Boolean = true): Unit = {
+    val fileWriter = new FileWriter(outputPath, append)
+    val printWriter = new PrintWriter(fileWriter)
+    val timestampedOutput = s"${Calendar.getInstance.getTime}: $content"
+    printWriter.println(timestampedOutput)
+    fileWriter.close()
+  }
 }
 
-object StructuredStreamingTopSensorStateReporter {
+object StructuredStreamingTopSensorState {
 
   import com.lackey.stream.examples.Constants._
   import WriterStrategies._
@@ -118,7 +119,6 @@ object StructuredStreamingTopSensorStateReporter {
       .getOrCreate()
 
     sparkSession.sparkContext.setLogLevel("ERROR")
-    //Logger.getLogger(classOf[MicroBatchExecution]).setLevel(Level.DEBUG)
 
     import org.apache.spark.sql.functions._
     import sparkSession.implicits._

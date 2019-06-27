@@ -4,7 +4,7 @@ import java.io.{File, PrintWriter}
 import java.time.Instant
 import java.util.Date
 
-import com.lackey.stream.examples.dataset.StructuredStreamingTopSensorStateReporter
+import com.lackey.stream.examples.dataset.StructuredStreamingTopSensorState
 import org.apache.commons.io.FileUtils
 import org.apache.spark.streaming.StreamingContext
 import org.scalatest.{Assertion, Matchers, WordSpec}
@@ -73,7 +73,7 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
       val queryFuture =
         Future {
           Thread.sleep(10 * 1000)
-          StructuredStreamingTopSensorStateReporter.processInputStream( doWrites = fileWriter)
+          StructuredStreamingTopSensorState.processInputStream( doWrites = fileWriter)
         }
 
       writeRecords()
@@ -84,32 +84,11 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
   }
 
 
-  /*
-    "ContinuousTopSensorStateReporter" should {
-
-
-    "correctly output top states for target sensor using structured streaming" in {
-      setup()
-
-      val query =
-        StructuredStreamingTopSensorStateReporter.
-          processInputStream()
-
-      writeRecords()
-      query.awaitTermination()
-      verifyResult
-    }
-
-   */
-
-  // TODO - replace wi/ FileUtils
-
   def writeStringToFile(filePath: String, content: String): Unit = {
     new PrintWriter(filePath) {
       write(content); close()
     }
   }
-
 
   def verifyResult: Assertion = {
     val output: mutable.Seq[String] = FileUtils.readLines(new File(outputFile)).asScala
