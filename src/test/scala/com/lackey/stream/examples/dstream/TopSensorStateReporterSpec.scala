@@ -65,6 +65,8 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
     }
 
     "correctly output top states for target sensor using structured streaming" in {
+      import com.lackey.stream.examples.dataset.WriterStrategies._
+
       setup()
 
       var timeStampSeconds = Instant.now.getEpochSecond
@@ -74,9 +76,8 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
       val queryFuture =
         Future {
           Thread.sleep(10 * 1000)
-          StructuredStreamingTopSensorStateReporter. processInputStream()
+          StructuredStreamingTopSensorStateReporter.processInputStream( doWrites = fileWriter)
         }
-
 
       writeRecords()
       val query = Await.result(queryFuture , 6 seconds)
