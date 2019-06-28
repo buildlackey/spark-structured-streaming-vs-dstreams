@@ -22,6 +22,10 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
   val t7_input_path = s"$incomingFilesDirPath/t7_probe_x2_1"
   val t12_input_path = s"$incomingFilesDirPath/t12_probe_x1_2"
 
+
+  val OverrideWaitSeconds = Option(System.getenv("TOPSENSOR_STARTUP_WAIT_SECONDS"))
+  val StructuredStreamStartupWaitSeconds: Int = OverrideWaitSeconds.getOrElse("10").toInt
+
   def now = java.time.LocalDateTime.now().toString()
 
   def t2_probe_x2_2 =
@@ -43,10 +47,23 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
     """.stripMargin
 
 
-  def dummy =
-    s"""$now,zoop,oakland,x1
-       |$now,rockbox,oakland,x1
-    """.stripMargin
+  def writeRecords(): Unit = {
+    Thread.sleep(2 * 1000) //
+    println(s"wrote to file at ${new Date().toString}")
+    writeStringToFile(t2_input_path, t2_probe_x2_2)
+
+    Thread.sleep(5 * 1000) //
+    println(s"wrote to file2 at ${new Date().toString}")
+    writeStringToFile(t7_input_path, t7_probe_x2_1)
+
+    Thread.sleep(5 * 1000) //
+    println(s"wrote to file3 at ${new Date().toString}")
+    writeStringToFile(t12_input_path, t12_probe_x1_2)
+
+    Thread.sleep(40 * 1000) //
+  }
+
+
 
   "Top Sensor State Reporter" should {
     "correctly output top states for target sensor using DStreams" in {
@@ -62,22 +79,27 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
     }
 
     "correctly output top states for target sensor using structured streaming" in {
-      import com.lackey.stream.examples.dataset.WriterStrategies._
+      import com.lackey.stream.examples.dataset.StreamWriterStrategies._
 
       setup()
 
-      var timeStampSeconds = Instant.now.getEpochSecond
-      while (timeStampSeconds % 30 != 0) {  timeStampSeconds = Instant.now.getEpochSecond }
-      println(s"start processing on 0 or 30 second boundary  ${new Date().toString}")
+      if (StructuredStreamStartupWaitSeconds != 0) {
+        var timeStampSeconds = Instant.now.getEpochSecond
+        while (timeStampSeconds % 30 != 0) {  timeStampSeconds = Instant.now.getEpochSecond }
+      }
+
+      println(
+        s"start processing on 0 or 30 second boundary  " +
+          s"${new Date().toString} with wait=$StructuredStreamStartupWaitSeconds")
 
       val queryFuture =
         Future {
-          Thread.sleep(10 * 1000)
+          Thread.sleep(StructuredStreamStartupWaitSeconds * 1000)
           StructuredStreamingTopSensorState.processInputStream( doWrites = fileWriter)
         }
 
       writeRecords()
-      val query = Await.result(queryFuture , 6 seconds)
+      val query = Await.result(queryFuture , StructuredStreamStartupWaitSeconds seconds)
       verifyResult
       query.stop()
     }
@@ -95,23 +117,6 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
     val strings: mutable.Seq[String] = output.map(_.replaceAll(".*sensor states: ", ""))
     val expected = "TreeSet(x2)|TreeSet(x1, x2)|TreeSet(x1, x2)|TreeSet(x1)"
     strings.mkString("|") shouldBe expected
-  }
-
-  def writeRecords(): Unit = {
-    Thread.sleep(2 * 1000) //
-    println(s"wrote to file at ${new Date().toString}")
-    writeStringToFile(t2_input_path, t2_probe_x2_2)
-
-    Thread.sleep(5 * 1000) //
-    println(s"wrote to file2 at ${new Date().toString}")
-    writeStringToFile(t7_input_path, t7_probe_x2_1)
-
-    Thread.sleep(5 * 1000) //
-    println(s"wrote to file3 at ${new Date().toString}")
-    writeStringToFile(t12_input_path, t12_probe_x1_2)
-
-
-    Thread.sleep(30 * 1000) //
   }
 
   // Delete and recreate checkpoint and input directories and any old version of output file

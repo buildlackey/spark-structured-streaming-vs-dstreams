@@ -31,7 +31,7 @@ import scala.collection.{immutable, mutable}
 import mutable.WrappedArray
 
 
-object WriterStrategies {
+object StreamWriterStrategies {
 
   type DataFrameWriter = DataFrame => StreamingQuery
 
@@ -76,6 +76,7 @@ object WriterStrategies {
           FileHelpers.writeStringToFile(
             outputFile,
             statesForEachWindow.mkString("\n"), append = false)
+          println(s"at ${new Date().toString}. Batch: $batchId / statesperWindow: $statesForEachWindow ")
       }
       .start()
   }
@@ -94,7 +95,7 @@ object WriterStrategies {
 object StructuredStreamingTopSensorState {
 
   import com.lackey.stream.examples.Constants._
-  import WriterStrategies._
+  import StreamWriterStrategies._
 
   val WINDOW: String = s"$WINDOW_SECS seconds"
   val SLIDE: String = s"$SLIDE_SECS seconds"
