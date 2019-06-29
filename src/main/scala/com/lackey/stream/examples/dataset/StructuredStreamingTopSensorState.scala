@@ -119,7 +119,7 @@ object StructuredStreamingTopSensorState {
         line: String =>
           println(s"line at ${new Date().toString}: " + line)
           val parts: Array[String] = line.split(",")
-          if (parts.length >= 4 && parts(1).equals("probe")) {
+          if (parts.length >= 4 && parts(1).equals("temp")) {
             (3 until parts.length).map(colIndex => (parts(colIndex), parts(0)))
           } else {
             Nil

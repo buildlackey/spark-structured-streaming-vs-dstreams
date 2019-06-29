@@ -20,12 +20,12 @@ class DstreamTopSensorState extends Serializable {
   def processStream(stringContentStream: DStream[String], outputFile: String): Unit = {
     val wordsInLine: DStream[Array[String]] = stringContentStream.map(_.split(","))
 
-    // Filter for 'probe' type of sensor, then find all of probe's states (order by most frequently occurring to least)
+    // Filter for 'temp' type of sensor, then find all of temp's states (order by most frequently occurring to least)
     val sensorStateOccurrences: DStream[(String, Int)] =
       wordsInLine.flatMap {
         words: Array[String] =>
           var retval = Array[(String, Int)]()
-          if (words.length >= 4 && words(1) == "probe") {
+          if (words.length >= 4 && words(1) == "temp") {
             retval = words.drop(3).map((state: String) => (state, 1))
           }
           retval
