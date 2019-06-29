@@ -1,7 +1,6 @@
 package com.lackey.stream.examples.dstream
 
 import java.io.{File, PrintWriter}
-import java.time.Instant
 import java.util.Date
 
 import com.lackey.stream.examples.dataset.StructuredStreamingTopSensorState
@@ -11,11 +10,9 @@ import org.scalatest.{Assertion, Matchers, WordSpec}
 
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class TopSensorStateReporterSpec extends WordSpec with Matchers {
+
   import com.lackey.stream.examples.Constants._
 
   val t2_input_path = s"$incomingFilesDirPath/t2_temp_x2_2"
@@ -62,7 +59,6 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
   }
 
 
-
   "Top Sensor State Reporter" should {
     "correctly output top states for target sensor using DStreams" in {
       setup()
@@ -84,7 +80,7 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
 
       val query =
         StructuredStreamingTopSensorState.
-          processInputStream( doWrites = fileWriter)
+          processInputStream(doWrites = fileWriter)
 
       writeRecords()
       verifyResult
@@ -96,7 +92,8 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
   def writeStringToFile(filePath: String,
                         content: String): Unit = {
     new PrintWriter(filePath) {
-      write(content); close()
+      write(content);
+      close()
     }
   }
 

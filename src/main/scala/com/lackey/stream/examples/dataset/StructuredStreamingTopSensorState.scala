@@ -1,34 +1,17 @@
 package com.lackey.stream.examples.dataset
 
-import java.io.{FileWriter, PrintWriter}
-import java.sql.Timestamp
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Date}
+import java.util.Date
 
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions._
-import org.apache.spark.sql._
-import org.apache.spark.sql.types._
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions._
-import org.apache.spark.sql._
-import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.types._
-import org.apache.spark.sql._
-import org.apache.spark.sql.execution.streaming.MicroBatchExecution
-import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.streaming.{ProcessingTime, StreamingQuery, Trigger}
-import org.apache.spark.sql.types.{StructField, StructType}
-import org.apache.spark.sql.types.{StringType, StructType}
 import com.lackey.stream.examples.Constants._
 import com.lackey.stream.examples.FileHelpers
+import org.apache.spark.sql.{SparkSession, _}
+import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.streaming.{StreamingQuery, Trigger}
 
-import collection.immutable.SortedSet
-import scala.collection.{immutable, mutable}
-import mutable.WrappedArray
+import scala.collection.immutable.SortedSet
+import scala.collection.mutable
+import scala.collection.mutable.WrappedArray
 
 
 object StreamWriterStrategies {
@@ -90,12 +73,13 @@ object StreamWriterStrategies {
 
     override def close(errorOrNull: Throwable): Unit = {}
   }
+
 }
 
 object StructuredStreamingTopSensorState {
 
-  import com.lackey.stream.examples.Constants._
   import StreamWriterStrategies._
+  import com.lackey.stream.examples.Constants._
 
   val WINDOW: String = s"$WINDOW_SECS seconds"
   val SLIDE: String = s"$SLIDE_SECS seconds"

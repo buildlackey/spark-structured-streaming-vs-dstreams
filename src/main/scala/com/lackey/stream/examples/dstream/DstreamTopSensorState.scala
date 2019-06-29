@@ -1,14 +1,10 @@
 package com.lackey.stream.examples.dstream
 
-import java.io.{FileWriter, PrintWriter}
-import java.util.Calendar
-
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
 import scala.collection.immutable.TreeSet
-import scala.collection.mutable
 
 
 class DstreamTopSensorState extends Serializable {
