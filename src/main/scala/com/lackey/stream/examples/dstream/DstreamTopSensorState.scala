@@ -38,13 +38,12 @@ class DstreamTopSensorState extends Serializable {
         case (state, count) => (count, state)
       }
 
-    case class TopCandidatesResult(state: String,
-                                   count: Int,
+    case class TopCandidatesResult(count: Int,
                                    candidates: TreeSet[String] /* all candidates seen 'count' times*/)
     val topCandidates: DStream[TopCandidatesResult] =
       countToState.map {
         case (count, state) =>
-          TopCandidatesResult(state, count, TreeSet(state))
+          TopCandidatesResult(count, TreeSet(state))
       }
 
     val topCandidatesFinalist: DStream[TopCandidatesResult] =
@@ -52,7 +51,6 @@ class DstreamTopSensorState extends Serializable {
         (top1: TopCandidatesResult, top2: TopCandidatesResult) =>
           if (top1.count == top2.count)
             TopCandidatesResult(
-              top1.state,
               top1.count,
               top1.candidates ++ top2.candidates)
           else if (top1.count > top2.count)
