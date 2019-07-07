@@ -3,7 +3,7 @@ package com.lackey.stream.examples.dstream
 import java.io.{File, PrintWriter}
 import java.util.Date
 
-import com.lackey.stream.examples.dataset.StructuredStreamingTopSensorState
+import com.lackey.stream.examples.dataset.{StructuredStreamingTopSensorState, TopStatesInWindowRanker}
 import org.apache.commons.io.FileUtils
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.StreamingContext
@@ -88,10 +88,15 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
       query.stop()
     }
 
-    "work in batch mode" ignore {
+    // This test has no assertions. It just demos how we might have
+    // prototyped our streaming code by first making it work in batch
+    "work in batch mode" in {
       setup()
+      Thread.sleep(2 * 1000) //
       writeStringToFile(t2_input_path, t2_temp_x2_2)
+      Thread.sleep(5 * 1000) //
       writeStringToFile(t7_input_path, t7_temp_x2_1)
+      Thread.sleep(5 * 1000) //
       writeStringToFile(t12_input_path, t12_temp_x1_2)
 
       val sparkSession = SparkSession.builder
@@ -101,13 +106,14 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
 
       sparkSession.sparkContext.setLogLevel("ERROR")
 
-      import org.apache.spark.sql.functions._
-      import sparkSession.implicits._
+      val linesDs = sparkSession.read.textFile(incomingFilesDirPath)
+      val toStateCountsByWindow =
+        StructuredStreamingTopSensorState.
+          toStateCountsByWindow(
+            linesDs,
+            sparkSession)
 
-      //sparkSession.read.textjjk
-
-
-
+      TopStatesInWindowRanker.rankAndFilter(toStateCountsByWindow).show()
     }
 
   }
