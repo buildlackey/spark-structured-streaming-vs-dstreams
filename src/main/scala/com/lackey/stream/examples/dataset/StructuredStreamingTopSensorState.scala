@@ -14,6 +14,23 @@ import scala.collection.mutable
 import scala.collection.mutable.WrappedArray
 
 
+object TopStatesInWindowRanker {
+  def rankAndFilter(batchDs: Dataset[Row]): DataFrame = {
+      batchDs.
+        withColumn(
+          "rank",
+          rank().
+            over(
+              Window.
+                partitionBy("window_start").
+                orderBy(batchDs.col("count").desc)))
+        .orderBy("window_start")
+        .filter(col("rank") <= 1)
+        .drop("rank")
+        .groupBy("window_start").agg(collect_list("state").as("states"))
+  }
+}
+
 object StreamWriterStrategies {
 
   type DataFrameWriter = DataFrame => StreamingQuery
@@ -28,22 +45,14 @@ object StreamWriterStrategies {
   }
 
   val fileWriter: DataFrameWriter = { df =>
-    df.writeStream.
-      outputMode("complete").
-      trigger(Trigger.ProcessingTime(10)).
-
-      foreachBatch {
+    df
+      .writeStream
+      .outputMode("complete")
+      .trigger(Trigger.ProcessingTime(10))
+      .foreachBatch {
         (batchDs: Dataset[Row], batchId: Long) =>
           val topCountByWindowAndStateDf =
-            batchDs.
-              withColumn(
-                "rank",
-                rank().over(Window.partitionBy("window_start").orderBy(batchDs.col("count").desc)))
-              .orderBy("window_start")
-              .filter(col("rank") <= 1)
-              .drop("rank")
-              .groupBy("window_start").agg(collect_list("state").as("states"))
-
+            TopStatesInWindowRanker.rankAndFilter(batchDs)
           val statesForEachWindow =
             topCountByWindowAndStateDf.
               collect().
@@ -63,26 +72,12 @@ object StreamWriterStrategies {
       }
       .start()
   }
-
-  class WindowWriter extends ForeachWriter[Row] {
-    override def open(partitionId: Long, version: Long): Boolean = true
-
-    override def process(value: Row): Unit = {
-      value.schema.printTreeString()
-    }
-
-    override def close(errorOrNull: Throwable): Unit = {}
-  }
-
 }
 
 object StructuredStreamingTopSensorState {
 
   import StreamWriterStrategies._
   import com.lackey.stream.examples.Constants._
-
-  val WINDOW: String = s"$WINDOW_SECS seconds"
-  val SLIDE: String = s"$SLIDE_SECS seconds"
 
   def processInputStream(doWrites: DataFrameWriter = consoleWriter): StreamingQuery = {
     val sparkSession = SparkSession.builder
@@ -91,15 +86,31 @@ object StructuredStreamingTopSensorState {
       .getOrCreate()
 
     sparkSession.sparkContext.setLogLevel("ERROR")
-
     import org.apache.spark.sql.functions._
     import sparkSession.implicits._
 
     val fileStreamDS: Dataset[String] = // create line stream from files in folder
       sparkSession.readStream.textFile(incomingFilesDirPath).as[String]
 
+    doWrites(
+      toStateCountsByWindow(
+        fileStreamDS,
+        sparkSession)
+    )
+  }
+
+
+  val WINDOW: String = s"$WINDOW_SECS seconds"
+  val SLIDE: String = s"$SLIDE_SECS seconds"
+
+  def toStateCountsByWindow(linesFromFile : Dataset[String],
+                            sparkSession: SparkSession):
+  Dataset[Row] = {
+
+    import sparkSession.implicits._
+
     val sensorTypeAndTimeDS: Dataset[(String, String)] =
-      fileStreamDS.flatMap {
+      linesFromFile.flatMap {
         line: String =>
           println(s"line at ${new Date().toString}: " + line)
           val parts: Array[String] = line.split(",")
@@ -121,13 +132,13 @@ object StructuredStreamingTopSensorState {
 
     System.out.println("timeStampedDF:" + timeStampedDF.printSchema());
 
-    val timeWindow = window($"timestamp", WINDOW, SLIDE).as("time_window")
-    val counted: DataFrame = timeStampedDF
-      .groupBy(timeWindow, $"state")
+    timeStampedDF
+      .groupBy(
+        window(
+          $"timestamp", WINDOW, SLIDE).as("time_window"),
+        $"state")
       .count()
       .withColumn("window_start", $"time_window.start")
       .orderBy($"time_window", $"count".desc)
-
-    doWrites(counted)
   }
 }

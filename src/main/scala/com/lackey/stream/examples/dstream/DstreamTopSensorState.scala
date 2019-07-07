@@ -13,16 +13,18 @@ class DstreamTopSensorState extends Serializable {
   import com.lackey.stream.examples.FileHelpers._
 
 
-  def processStream(stringContentStream: DStream[String], outputFile: String): Unit = {
-    val wordsInLine: DStream[Array[String]] = stringContentStream.map(_.split(","))
+  def processStream(stringContentStream: DStream[String],
+                    outputFile: String): Unit = {
+    val wordsInLine: DStream[Array[String]] =
+      stringContentStream.map(_.split(","))
 
-    // Filter for 'temp' type of sensor, then find all of temp's states (order by most frequently occurring to least)
     val sensorStateOccurrences: DStream[(String, Int)] =
       wordsInLine.flatMap {
         words: Array[String] =>
           var retval = Array[(String, Int)]()
           if (words.length >= 4 && words(1) == "temp") {
-            retval = words.drop(3).map((state: String) => (state, 1))
+            retval =
+              words.drop(3).map((state: String) => (state, 1))
           }
           retval
       }
@@ -30,8 +32,9 @@ class DstreamTopSensorState extends Serializable {
     val stateToCount: DStream[(String, Int)] =
       sensorStateOccurrences.
         reduceByKeyAndWindow(
-          (count1: Int, count2: Int)
-          => count1 + count2, WINDOW_DURATION, SLIDE_DURATION
+          (count1: Int,
+           count2: Int) => count1 + count2,
+          WINDOW_DURATION, SLIDE_DURATION
         )
     val countToState: DStream[(Int, String)] =
       stateToCount.map {
@@ -39,7 +42,7 @@ class DstreamTopSensorState extends Serializable {
       }
 
     case class TopCandidatesResult(count: Int,
-                                   candidates: TreeSet[String] /* all candidates seen 'count' times*/)
+                                   candidates: TreeSet[String])
     val topCandidates: DStream[TopCandidatesResult] =
       countToState.map {
         case (count, state) =>
@@ -62,7 +65,9 @@ class DstreamTopSensorState extends Serializable {
     topCandidatesFinalist.foreachRDD { rdd =>
       rdd.foreach {
         item: TopCandidatesResult =>
-          writeStringToFile(outputFile, s"top sensor states: ${item.candidates}", true)
+          writeStringToFile(
+            outputFile,
+            s"top sensor states: ${item.candidates}", true)
       }
     }
   }

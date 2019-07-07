@@ -5,6 +5,7 @@ import java.util.Date
 
 import com.lackey.stream.examples.dataset.StructuredStreamingTopSensorState
 import org.apache.commons.io.FileUtils
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.StreamingContext
 import org.scalatest.{Assertion, Matchers, WordSpec}
 
@@ -86,6 +87,29 @@ class TopSensorStateReporterSpec extends WordSpec with Matchers {
       verifyResult
       query.stop()
     }
+
+    "work in batch mode" ignore {
+      setup()
+      writeStringToFile(t2_input_path, t2_temp_x2_2)
+      writeStringToFile(t7_input_path, t7_temp_x2_1)
+      writeStringToFile(t12_input_path, t12_temp_x1_2)
+
+      val sparkSession = SparkSession.builder
+        .master("local")
+        .appName("example")
+        .getOrCreate()
+
+      sparkSession.sparkContext.setLogLevel("ERROR")
+
+      import org.apache.spark.sql.functions._
+      import sparkSession.implicits._
+
+      //sparkSession.read.textjjk
+
+
+
+    }
+
   }
 
 
